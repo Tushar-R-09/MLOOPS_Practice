@@ -1,0 +1,47 @@
+name: CI - Train and Save the model
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  matrix-pip:
+    name: Train and Save the model
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: [3.11, 3.12]
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup python 
+        uses: actions/setup-python@v4
+        with:
+           python-version: ${{ matrix.python }}
+      
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip setuptools wheel
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Train the model
+        run: |
+           uv run python train.py
+           ls -la artifacts
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ml-artifacts-${{ matrix.python }}-${{ github.run_id }}
+          path: artifacts
+
